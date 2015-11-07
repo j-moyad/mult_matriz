@@ -12,6 +12,7 @@ int main (int argc, char **argv)
 	int nproc, pid;	
 	int *a, *b, *c, *re, *co,*to;
 	int x, y, N, i, j, total, tmp, op_terminadas = 0;
+	clock_t start, end;
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -41,21 +42,9 @@ int main (int argc, char **argv)
 				llenamatriz(a, 1, N);
 				llenamatriz(b, 1, N);
 				llenamatriz(c, 0, N);
+				
+				start = clock();
 
-				/*for(i=0; i<nproc-1; i++)
-				{				
-					MPI_Send(&a[0], 1, renglon, i+1, 1, MPI_COMM_WORLD);
-				}
-
-				for(i=0; i<nproc-1; i++)
-				{				
-					MPI_Send(&b[i], 1, columna, i+1, 1, MPI_COMM_WORLD);
-				}
-					
-				for(i=0; i<nproc-1; i++)
-				{				
-					MPI_Recv(&c[i], 1, MPI_INT, i+1, 1, MPI_COMM_WORLD, &status);
-				}*/	
 				while(op_terminadas < nproc - 1) {
 					MPI_Recv(&tmp, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG,
 					 MPI_COMM_WORLD, &status);
@@ -74,8 +63,8 @@ int main (int argc, char **argv)
 					}
 					else // Cualquier otra tag indica la posicion del resultado
 					{
-						x = status.MPI_TAG % 10;
-						y = N * ((status.MPI_TAG / 10 - 1) * (nproc-1) + status.MPI_SOURCE - 1);
+						x = status.MPI_TAG % 10000;
+						y = N * ((status.MPI_TAG / 10000 - 1) * (nproc-1) + status.MPI_SOURCE - 1);
 						c[x+y] = tmp;
 					}
 				}
@@ -98,7 +87,7 @@ int main (int argc, char **argv)
 						MPI_Recv(co, 1, renglon, 0, pid, MPI_COMM_WORLD, &status);
 						
 						total = multiplica(re, co, N);
-						MPI_Send(&total, 1, MPI_INT, 0, (i+1)*10+j, MPI_COMM_WORLD);
+						MPI_Send(&total, 1, MPI_INT, 0, (i+1)*10000+j, MPI_COMM_WORLD);
 					}
 				}
 				
@@ -106,6 +95,25 @@ int main (int argc, char **argv)
 
 			}			
 		}
+		
+		if(pid == 0) 
+		{
+			end = clock();
+
+			int h,m;
+			float s;
+			
+			s = (float)(end - start) / CLOCKS_PER_SEC;
+			m = ((int)s / 60) % 60;
+			h = s / 3600;
+			
+			while(s >= 60) // Como no es int no se puede usar modulo
+			{
+				s -= 60.0;
+			}
+			
+			printf("\nTiempo total: %02d:%02d:%09.06f\n", h, m, s);
+		}			
 		else
 		{	
 			if(pid == 0)
@@ -123,8 +131,7 @@ int main (int argc, char **argv)
 		{
 			printf("\n\nFaltan argumentos para el proyecto\n\n");
 		}
-	}  	
-	
+	}
 
 	MPI_Finalize();
 	return 0;
